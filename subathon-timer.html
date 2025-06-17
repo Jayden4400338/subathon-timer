@@ -349,6 +349,43 @@
             showNotification(running ? "Timer Resumed" : "Timer Paused");
         });
 
+        // ====== Streamlabs WebSocket Connection ======
+const socket = new WebSocket(`wss://sockets.streamlabs.com?token=${CONFIG.STREAMLABS_TOKEN}`);
+
+socket.addEventListener('open', () => {
+    console.log('Connected to Streamlabs WebSocket');
+    showNotification('Connected to Streamlabs');
+});
+
+socket.addEventListener('message', (event) => {
+    const data = JSON.parse(event.data);
+    console.log('Streamlabs event:', data);
+
+    if (data.type === 'subscription') {
+        addTime('subs', data.message.amount || 1, data.message.displayName);
+        showNotification(`${data.message.displayName} subscribed! Added time.`);
+    } else if (data.type === 'bits') {
+        addTime('bits', data.message.bits, data.message.displayName);
+        showNotification(`${data.message.displayName} cheered ${data.message.bits} bits! Added time.`);
+    } else if (data.type === 'redeem') {
+        addTime('points', data.message.reward.cost, data.message.displayName);
+        showNotification(`${data.message.displayName} redeemed ${data.message.reward.title}! Added time.`);
+    } else if (data.type === 'donation') {
+        addTime('donation', parseFloat(data.message.amount), data.message.displayName);
+        showNotification(`${data.message.displayName} donated $${data.message.amount}! Added time.`);
+    }
+});
+
+socket.addEventListener('close', () => {
+    console.log('Disconnected from Streamlabs WebSocket');
+    showNotification('Disconnected from Streamlabs');
+});
+
+socket.addEventListener('error', (error) => {
+    console.error('Streamlabs WebSocket error:', error);
+    showNotification('Streamlabs WebSocket error');
+});
+
     </script>
 </body>
 
