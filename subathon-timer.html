@@ -215,7 +215,7 @@
         // Manual inputs
         const addTimeInput = document.getElementById('addTimeInput');
         const takeTimeInput = document.getElementById('takeTimeInput');
-        const spinWheelBtn = document.getElementById('spinWheelBtn');
+       
 
         // Dynamically load google font link element
         let fontLinkElem = document.createElement('link');
@@ -333,9 +333,7 @@
         });
 
         // ====== Spin wheel button ======
-        spinWheelBtn.addEventListener('click', () => {
-            showNotification('Spin the wheel triggered manually!');
-        });
+       
 
         // ====== Twitch & Streamlabs socket connection, event handlers etc. (Add yours here) ======
         // Placeholder for socket code if you want to hook up live events.
