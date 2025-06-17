@@ -50,15 +50,13 @@ Streamlabs Socket Token:
 
 Log into your Streamlabs Dashboard. https://streamlabs.com/login?r=https://streamlabs.com/dashboard
 
-Go to Settings → API Settings.
+Go to Settings → API Settings → API Tokens
 
 Copy your Socket Token.
 
 Twitch OAuth Token:
 
 Visit Twitch Token Generator. https://twitchtokengenerator.com/
-
-Log in with your Twitch account.
 
 Generate a token with these scopes/permissions:
 
@@ -68,15 +66,18 @@ channel:read:redemptions
 
 user:read:subscriptions
 
-Copy the generated token.
+click "Generate Token!" at the bottom
+log in with your twitch account
+
+Copy the Access token that appears at the top of the page.
 
 Twitch Channel ID:
 
-Visit [Twitch ID Finder.](https://www.streamweasels.com/tools/convert-twitch-username-%20to-user-id/)
+Visit Twitch ID Finder. https://www.streamweasels.com/tools/convert-twitch-username-%20to-user-id/
 
 Enter your Twitch username.
 
-Copy your numeric channel ID.
+Copy your channel ID.
 
 Example:
 js
@@ -84,7 +85,7 @@ Copy
 Edit
 const CONFIG = {
   STREAMLABS_TOKEN: "abcd1234-your-streamlabs-token-xyz",
-  TWITCH_OAUTH_TOKEN: "oauth:abcdef123456-your-twitch-oauth",
+  TWITCH_OAUTH_TOKEN: "abcdef123456-your-twitch-oauth",
   TWITCH_CHANNEL_ID: "123456789"
 };
 Step 4: Save your changes
