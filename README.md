@@ -26,7 +26,8 @@ Download the `subathon.html` file or clone this repo to your computer.
 
 ### Step 2: Open the code in a text editor
 
-Open `subathon.html` in a simple text editor like Notepad (Windows), TextEdit (Mac), or VSCode.
+Open `subathon.html` in a simple text editor like Notepad, or VSCode.
+(preferably vscode to view in live server)
 
 ---
 
