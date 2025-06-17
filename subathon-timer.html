@@ -1,0 +1,355 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8" />
+    <title>Subathon Timer with Tiered Time + Notifications + Manual Time Edit</title>
+
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            background: #000;
+            color: #0ff;
+            font-family: Arial, sans-serif;
+            display: flex;
+            height: 100vh;
+            overflow: hidden;
+        }
+
+        #container {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            background-color: var(--bg-color, transparent);
+            transition: background-color 0.5s;
+            user-select: none;
+            position: relative;
+        }
+
+        #timer {
+            font-size: var(--font-size, 6em);
+            color: var(--text-color, #00FFCC);
+            text-shadow: 0 0 20px var(--shadow-color, #00FFFF);
+            font-family: var(--font-family, 'Orbitron', sans-serif);
+            margin-bottom: 40px;
+        }
+
+        #notification {
+            position: absolute;
+            top: 20px;
+            background: #fff600;
+            padding: 12px 30px;
+            border-radius: 12px;
+            font-size: 1.6em;
+            font-weight: bold;
+            color: #000;
+            opacity: 0;
+            pointer-events: none;
+            user-select: none;
+            z-index: 100;
+            border: 4px solid #ffdd00;
+            box-shadow: 0 0 20px #ffdd00;
+            animation: none;
+            text-align: center;
+            min-width: 280px;
+        }
+
+        /* Flashing border animation */
+        @keyframes flashBorder {
+
+            0%,
+            100% {
+                border-color: #ffdd00;
+                box-shadow: 0 0 20px #ffdd00;
+            }
+
+            50% {
+                border-color: #ff5500;
+                box-shadow: 0 0 40px #ff5500;
+            }
+        }
+
+        #notification.show {
+            opacity: 1;
+            animation: flashBorder 1s infinite;
+        }
+
+        #settings {
+            width: 320px;
+            padding: 20px;
+            background: #111;
+            border-radius: 10px;
+            font-size: 14px;
+            color: #ccc;
+            font-family: Arial, sans-serif;
+            overflow-y: auto;
+        }
+
+        #settings label {
+            display: block;
+            margin: 12px 0 4px;
+        }
+
+        #pauseResumeBtn {
+            margin-top: 20px;
+            padding: 12px 0;
+            width: 100%;
+            font-size: 16px;
+            font-weight: bold;
+            color: #00ffcc;
+            background-color: #111;
+            border: 2px solid #00ffcc;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: background-color 0.3s, color 0.3s;
+            user-select: none;
+        }
+
+        #pauseResumeBtn:hover {
+            background-color: #00ffcc;
+            color: #111;
+        }
+
+        #settings input[type=text],
+        #settings input[type=color],
+        #settings input[type=number] {
+            width: 100%;
+            padding: 6px 8px;
+            border-radius: 4px;
+            border: none;
+            font-size: 14px;
+            box-sizing: border-box;
+            background: #222;
+            color: #eee;
+        }
+
+        #settings small {
+            color: #666;
+        }
+
+        #manualControls {
+            margin-top: 15px;
+            display: flex;
+            gap: 10px;
+            flex-direction: column;
+        }
+
+        #manualControls input {
+            font-size: 1em;
+            padding: 6px 8px;
+        }
+    </style>
+</head>
+
+<body>
+    <div id="container">
+        <div id="notification"></div>
+        <div id="timer">00:00:00</div>
+    </div>
+
+    <div id="settings">
+        <h3>Customize Timer</h3>
+
+        <label for="googleFontLink">Google Fonts Link</label>
+        <input id="googleFontLink" type="text" placeholder="Paste Google Fonts URL here"
+            value="https://fonts.googleapis.com/css2?family=Orbitron&display=swap" />
+
+        <label for="fontFamily">Font Family Name</label>
+        <input id="fontFamily" type="text" placeholder="e.g. 'Orbitron', sans-serif" value="'Orbitron', sans-serif" />
+
+        <label for="textColor">Text Color</label>
+        <input id="textColor" type="color" value="#00ffcc" />
+
+        <label for="shadowColor">Text Shadow Color</label>
+        <input id="shadowColor" type="color" value="#00ffff" />
+
+        <label for="backgroundColor">Background Color (use #000000 or 'transparent')</label>
+        <input id="backgroundColor" type="text" placeholder="transparent or #000000" value="transparent" />
+
+        <label for="fontSize">Font Size (em)</label>
+        <input id="fontSize" type="number" min="1" max="20" step="0.1" value="6" />
+
+        <h3 style="margin-top: 25px;">Manual Time Controls (minutes)</h3>
+        <div id="manualControls">
+            <input type="number" id="addTimeInput" placeholder="Add Time (minutes)" min="0" step="1" />
+            <input type="number" id="takeTimeInput" placeholder="Take Time (minutes)" min="0" step="1" />
+        </div>
+
+
+
+        <button id="pauseResumeBtn"
+            style="margin-top: 20px; padding: 10px; width: 100%; font-size: 16px; cursor: pointer;">
+            Pause Timer
+        </button>
+
+    </div>
+
+    <script>
+        // ====== CONFIG - tokens and channel ID - CHANGE THESE ONLY ======
+        const CONFIG = {
+            STREAMLABS_TOKEN: "YOUR_STREAMLABS_SOCKET_TOKEN_HERE",
+            TWITCH_OAUTH_TOKEN: "YOUR_TWITCH_OAUTH_TOKEN_HERE",
+            TWITCH_CHANNEL_ID: "YOUR_TWITCH_CHANNEL_ID_HERE"
+        };
+
+        // ====== STATE ======
+        let totalSeconds = 0;
+        let running = true;
+
+        // ====== DOM Elements ======
+        const timerElem = document.getElementById('timer');
+        const containerElem = document.getElementById('container');
+        const notificationElem = document.getElementById('notification');
+
+        // Settings inputs
+        const googleFontLinkInput = document.getElementById('googleFontLink');
+        const fontFamilyInput = document.getElementById('fontFamily');
+        const textColorInput = document.getElementById('textColor');
+        const shadowColorInput = document.getElementById('shadowColor');
+        const backgroundColorInput = document.getElementById('backgroundColor');
+        const fontSizeInput = document.getElementById('fontSize');
+
+        // Manual inputs
+        const addTimeInput = document.getElementById('addTimeInput');
+        const takeTimeInput = document.getElementById('takeTimeInput');
+        const spinWheelBtn = document.getElementById('spinWheelBtn');
+
+        // Dynamically load google font link element
+        let fontLinkElem = document.createElement('link');
+        fontLinkElem.rel = 'stylesheet';
+        document.head.appendChild(fontLinkElem);
+
+        // ====== Timer Display ======
+        function updateTimerDisplay() {
+            const h = String(Math.floor(totalSeconds / 3600)).padStart(2, '0');
+            const m = String(Math.floor((totalSeconds % 3600) / 60)).padStart(2, '0');
+            const s = String(totalSeconds % 60).padStart(2, '0');
+            timerElem.textContent = `${h}:${m}:${s}`;
+        }
+
+        function countdown() {
+            if (running && totalSeconds > 0) {
+                totalSeconds--;
+                updateTimerDisplay();
+            }
+        }
+        setInterval(countdown, 1000);
+
+        // ====== Add time based on your tiers ======
+        function addTime(type, amount, userName = "") {
+            let add = 0;
+
+            if (type === 'subs') {
+                if (amount >= 100) add = 12 * 3600;
+                else if (amount >= 50) add = 6 * 3600;
+                else if (amount >= 10) add = 3600;
+                else if (amount >= 5) add = 30 * 60;
+                else if (amount >= 1) add = 6 * 60;
+            } else if (type === 'bits') {
+                if (amount >= 5000) add = 6 * 3600;
+                else if (amount >= 1000) add = 60 * 60;
+                else if (amount >= 100) add = 6 * 60;
+            } else if (type === 'points') {
+                if (amount === 100000) {
+                    showNotification(`${userName} redeemed spin the wheel!`);
+                    return;
+                } else if (amount >= 50000) {
+                    add = 60 * 60;
+                } else if (amount >= 10000) {
+                    add = 10 * 60;
+                }
+            } else if (type === 'donation') {
+                add = Math.floor(amount) * 60;
+            }
+
+            if (add > 0) {
+                totalSeconds += add;
+                updateTimerDisplay();
+            }
+        }
+
+        updateTimerDisplay();
+
+        // ====== Notification ======
+        let notificationTimeout;
+        function showNotification(text) {
+            clearTimeout(notificationTimeout);
+            notificationElem.textContent = text;
+            notificationElem.classList.add('show');
+
+            notificationTimeout = setTimeout(() => {
+                notificationElem.classList.remove('show');
+            }, 7000);
+        }
+
+        // ====== Apply styles from inputs ======
+        function applyStyles() {
+            const fontUrl = googleFontLinkInput.value.trim();
+            if (fontUrl) {
+                fontLinkElem.href = fontUrl;
+            }
+
+            containerElem.style.setProperty('--bg-color', backgroundColorInput.value.trim() || 'transparent');
+            timerElem.style.color = textColorInput.value;
+            timerElem.style.textShadow = `0 0 20px ${shadowColorInput.value}`;
+            timerElem.style.fontFamily = fontFamilyInput.value.trim() || "'Orbitron', sans-serif";
+            timerElem.style.fontSize = fontSizeInput.value + "em";
+        }
+        applyStyles();
+
+        googleFontLinkInput.addEventListener('change', applyStyles);
+        fontFamilyInput.addEventListener('input', applyStyles);
+        textColorInput.addEventListener('input', applyStyles);
+        shadowColorInput.addEventListener('input', applyStyles);
+        backgroundColorInput.addEventListener('input', applyStyles);
+        fontSizeInput.addEventListener('input', applyStyles);
+
+        // ====== Manual time inputs ======
+        addTimeInput.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') {
+                const minutes = parseInt(addTimeInput.value, 10);
+                if (!isNaN(minutes) && minutes > 0) {
+                    totalSeconds += minutes * 60;
+                    updateTimerDisplay();
+                    showNotification(`Added ${minutes} minute${minutes !== 1 ? 's' : ''}`);
+                    addTimeInput.value = '';
+                }
+            }
+        });
+
+        takeTimeInput.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') {
+                const minutes = parseInt(takeTimeInput.value, 10);
+                if (!isNaN(minutes) && minutes > 0) {
+                    totalSeconds = Math.max(0, totalSeconds - minutes * 60);
+                    updateTimerDisplay();
+                    showNotification(`Took away ${minutes} minute${minutes !== 1 ? 's' : ''}`);
+                    takeTimeInput.value = '';
+                }
+            }
+        });
+
+        // ====== Spin wheel button ======
+        spinWheelBtn.addEventListener('click', () => {
+            showNotification('Spin the wheel triggered manually!');
+        });
+
+        // ====== Twitch & Streamlabs socket connection, event handlers etc. (Add yours here) ======
+        // Placeholder for socket code if you want to hook up live events.
+
+
+        const pauseResumeBtn = document.getElementById('pauseResumeBtn');
+
+        pauseResumeBtn.addEventListener('click', () => {
+            running = !running;
+            pauseResumeBtn.textContent = running ? "Pause Timer" : "Resume Timer";
+            showNotification(running ? "Timer Resumed" : "Timer Paused");
+        });
+
+    </script>
+</body>
+
+</html>
